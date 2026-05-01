@@ -1,0 +1,15 @@
+# API keys and secrets
+.env
+
+# Dependencies
+node_modules/
+
+# Test reports and results
+test-results/
+reports/
+playwright-report/
+test-results.json
+
+# OS generated files
+.DS_Store
+Thumbs.db
