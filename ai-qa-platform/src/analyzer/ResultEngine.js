@@ -37,6 +37,9 @@ class ResultEngine {
         const passedResults = testResults.filter(r => r.status === 'passed');
         const failedResults = testResults.filter(r => r.status === 'failed' || r.status === 'timedOut');
 
+        let screenshotPath = null;
+        let logs = '';
+
         if (passedResults.length > 0 && failedResults.length > 0) {
           status = 'FLAKY';
         } else if (passedResults.length === 0) {
@@ -46,6 +49,20 @@ class ResultEngine {
           if (lastFail.error && lastFail.error.message) {
             failureReason = lastFail.error.message.split('\n')[0];
           }
+          
+          if (lastFail.attachments) {
+            const screenshotAttachment = lastFail.attachments.find(a => a.name === 'screenshot');
+            if (screenshotAttachment) {
+              screenshotPath = screenshotAttachment.path;
+            }
+          }
+
+          if (lastFail.stdout) {
+            logs = lastFail.stdout.map(s => s.text).join('');
+          }
+          if (lastFail.stderr) {
+            logs += lastFail.stderr.map(s => s.text).join('');
+          }
         }
 
         const reportEntry = {
@@ -53,7 +70,9 @@ class ResultEngine {
           title: spec.title,
           status,
           duration,
-          failureReason
+          failureReason,
+          screenshotPath,
+          logs
         };
 
         processedResults.push(reportEntry);

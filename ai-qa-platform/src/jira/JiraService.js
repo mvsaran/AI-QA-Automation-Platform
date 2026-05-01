@@ -1,4 +1,7 @@
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const FormData = require('form-data');
 const config = require('../config');
 
 class JiraService {
@@ -42,14 +45,25 @@ class JiraService {
       return { key: existingKey, duplicate: true };
     }
 
-    const description = `
+    let description = `
       *Test Failed:* ${testResult.title}
       
-      *Error Log:*
+      *Error Reason:*
       {code}
       ${testResult.failureReason}
       {code}
-      
+    `;
+
+    if (testResult.logs) {
+      description += `
+      *Execution Logs:*
+      {code}
+      ${testResult.logs}
+      {code}
+      `;
+    }
+
+    description += `
       *AI Analysis:*
       - *Root Cause:* ${aiAnalysis.rootCause}
       - *Severity:* ${aiAnalysis.severity}
@@ -72,9 +86,37 @@ class JiraService {
     try {
       const response = await this.client.post('/rest/api/2/issue', payload);
       console.log(`Successfully created Jira bug: ${response.data.key}`);
+
+      if (testResult.screenshotPath && fs.existsSync(testResult.screenshotPath)) {
+        console.log(`Attaching screenshot to Jira bug: ${response.data.key}...`);
+        await this.attachFile(response.data.key, testResult.screenshotPath);
+      }
+
       return { key: response.data.key, duplicate: false };
     } catch (error) {
       console.error('Failed to create Jira bug:', error.response ? error.response.data : error.message);
+      return null;
+    }
+  }
+
+  async attachFile(issueKey, filePath) {
+    if (!config.JIRA_URL || !config.JIRA_API_TOKEN) return null;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', fs.createReadStream(filePath), { filename: path.basename(filePath) });
+
+      const response = await axios.post(`${config.JIRA_URL}/rest/api/2/issue/${issueKey}/attachments`, formData, {
+        headers: {
+          ...formData.getHeaders(),
+          'Authorization': `Basic ${Buffer.from(`${config.JIRA_EMAIL}:${config.JIRA_API_TOKEN}`).toString('base64')}`,
+          'X-Atlassian-Token': 'no-check'
+        }
+      });
+      console.log(`Successfully attached file to ${issueKey}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to attach file to ${issueKey}:`, error.response ? error.response.data : error.message);
       return null;
     }
   }
