@@ -8,22 +8,23 @@ class FailureAnalyzer {
     });
   }
 
-  async analyzeFailure(testTitle, errorLog) {
+  async analyzeFailure(testTitle, errorLog, logs = '') {
     const prompt = `
       Act as a Senior SDET. Analyze the following automated test failure.
       
       Test Title: ${testTitle}
       Error Log: ${errorLog}
+      Execution Logs: ${logs}
 
       Provide a structured JSON response with your analysis:
       {
-        "rootCause": "Short explanation of why it failed",
+        "rootCause": "Detailed explanation of why it failed based on the error and logs",
         "severity": "Critical|High|Medium|Low",
-        "fixSuggestion": "Actionable step to fix the code or test",
+        "fixSuggestion": "Specific, actionable step to fix the code or test. Do not return 'none'.",
         "defectType": "ProductBug|EnvironmentIssue|TestDataIssue|FlakyTest",
         "isRealBug": true/false
       }
-      Note: Set 'isRealBug' to true ONLY if 'defectType' is 'ProductBug'. If it is an Environment Issue, Test Data Issue, or Flaky Test, set it to false.
+      Note: Set 'isRealBug' to true if 'defectType' is 'ProductBug'. If the failure is a functional mismatch or unexpected behavior in the application UI, classify it as a 'ProductBug'.
     `;
 
     try {

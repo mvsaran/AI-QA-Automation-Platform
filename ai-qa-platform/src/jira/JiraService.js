@@ -103,8 +103,23 @@ class JiraService {
     if (!config.JIRA_URL || !config.JIRA_API_TOKEN) return null;
 
     try {
+      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(config.WORKSPACE_DIR, filePath);
+      
+      if (!fs.existsSync(absolutePath)) {
+        console.error(`File does not exist at path: ${absolutePath}`);
+        return null;
+      }
+
+      console.log(`Preparing to attach file: ${absolutePath} to issue: ${issueKey}`);
+
       const formData = new FormData();
-      formData.append('file', fs.createReadStream(filePath), { filename: path.basename(filePath) });
+      const fileStream = fs.createReadStream(absolutePath);
+      const fileName = path.basename(absolutePath);
+      
+      formData.append('file', fileStream, {
+        filename: fileName,
+        contentType: 'image/png' // Explicitly set content type for screenshots
+      });
 
       const response = await axios.post(`${config.JIRA_URL}/rest/api/2/issue/${issueKey}/attachments`, formData, {
         headers: {
@@ -113,7 +128,8 @@ class JiraService {
           'X-Atlassian-Token': 'no-check'
         }
       });
-      console.log(`Successfully attached file to ${issueKey}`);
+      
+      console.log(`Successfully attached ${fileName} to ${issueKey}`);
       return response.data;
     } catch (error) {
       console.error(`Failed to attach file to ${issueKey}:`, error.response ? error.response.data : error.message);

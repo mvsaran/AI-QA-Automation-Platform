@@ -11,7 +11,7 @@ async function run() {
   for (const result of results) {
     if (result.status === 'FAIL') {
       console.log(`   Analyzing failure for: ${result.title}`);
-      const analysis = await failureAnalyzer.analyzeFailure(result.title, result.failureReason);
+      const analysis = await failureAnalyzer.analyzeFailure(result.title, result.failureReason, result.logs);
       result.aiAnalysis = analysis;
 
       if (analysis.isRealBug) {
